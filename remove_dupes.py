@@ -12,7 +12,6 @@ import logging as logging_lib
 import os
 import pickle
 
-
 flags = None
 logging = None
 
@@ -24,7 +23,7 @@ QUEUE_CACHE_FILE = 'queue'
 
 def setup():
   """Runs required setup before a search.
-  
+
   This will recursively list all directories to be used as a queue and pickled
   to file.
   """
@@ -36,9 +35,9 @@ def setup():
       queue = unpickler.load()
   else:
     queue = {}
-    
+
   if flags.search_dir in queue:
-    logging.info('Search already setup, %d items remaining' % 
+    logging.info('Search already setup, %d items remaining' %
         len(queue[flags.search_dir]))
   else:
     logging.info('Starting setup...')
@@ -49,7 +48,7 @@ def setup():
     with open(queue_filepath, 'w') as queue_file:
       pickler = pickle.Pickler(queue_file)
       pickler.dump(queue)
-  
+
 
 def list_dirs(path):
   """Recursively lists all dirs under path."""
@@ -59,7 +58,7 @@ def list_dirs(path):
     remove_empty_dir(path)
     # Don't add this dir to the list since it is empty.
     return []
-  
+
   # Recurse in and check for children.
   dirs = []
   for subdir in children:
@@ -76,58 +75,64 @@ def list_dirs(path):
     return []
 
   return dirs
-    
-    
+
+
 def remove_empty_dir(path):
-  # Remove the empty dir.
+  """Removes an empty directory."""
   logging.info('Removing empty dir: %s' % path)
   os.rmdir(path)
-  
+
+
 def init_cache():
   """Initializes the flags.cache_dir if not yet initialized."""
   if not os.path.exists(flags.cache_dir):
     os.mkdir(flags.cache_dir)
   global logging
   logging.info('cache_dir: %s' % flags.cache_dir)
-  
-  
-def main():
-  # setup command line parsing
-  global flags
-  global logging
-  
 
-  logging_lib.basicConfig(format=LOG_FORMAT, datefmt=DATE_FORMAT,
-      level=logging_lib.INFO)
-  logging = logging_lib.getLogger('remove_dupes')
-  
+
+def parse_args():
+  # Set up command line argument parsing.
   parser = argparse.ArgumentParser(
       formatter_class=argparse.RawTextHelpFormatter,
       description='Recursively find and remove duplicate files.')
-  
-  # Action and options.
+
+  # Parse the action.
   parser.add_argument('action', type=str, choices=['setup', 'search'],
       help='The action to perform.')
-      
+
   # Global config.
   parser.add_argument('--cache_dir', type=str,
       default=os.path.join(os.path.expanduser('~'), DEFAULT_CACHE_DIR),
       help='Directory to store program state.')
   parser.add_argument('--search_dir', required=True,
       help='Directory to be recursively searched for duplicates.')
-  # Setup option.
+
+  # Other options.
   parser.add_argument('--prune_empty_dirs', action='store_true', default=False,
       help='Delete\'s empty directories while running setup, for speed.')
 
-  # parse command line arguments
-  flags = parser.parse_args()
+  # Parse command line arguments
+  return parser.parse_args()
+
+
+def main():
+  global flags
+  global logging
+
+  # Set up logging.
+  logging_lib.basicConfig(format=LOG_FORMAT, datefmt=DATE_FORMAT,
+      level=logging_lib.INFO)
+  logging = logging_lib.getLogger('remove_dupes')
+
+  flags = parse_args()
 
   init_cache()
   if flags.action == 'setup':
     setup()
   else:
     logging.error('Bad command')
-      
+
 
 if __name__ == '__main__':
   main()
